@@ -4,9 +4,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 export type PomodoroMode = 'focus' | 'break'
 
 export default function PomodoroTimer() {
-  const [timeLeft, setTimeLeft] = useState<number>(() => {
-    const saved = localStorage.getItem('taskflow_pomodoro_timeLeft')
-    return saved !== null ? parseInt(saved, 10) : 25 * 60
+  const [mode, setMode] = useState<PomodoroMode>(() => {
+    const saved = localStorage.getItem('taskflow_pomodoro_mode')
+    return (saved as PomodoroMode) || 'focus'
   })
 
   const [isRunning, setIsRunning] = useState<boolean>(() => {
@@ -14,9 +14,9 @@ export default function PomodoroTimer() {
     return saved !== null ? JSON.parse(saved) : false
   })
 
-  const [mode, setMode] = useState<PomodoroMode>(() => {
-    const saved = localStorage.getItem('taskflow_pomodoro_mode')
-    return (saved as PomodoroMode) || 'focus'
+  const [targetEndTime, setTargetEndTime] = useState<number | null>(() => {
+    const saved = localStorage.getItem('taskflow_pomodoro_targetEndTime')
+    return saved !== null ? parseInt(saved, 10) : null
   })
 
   const [isOvertime, setIsOvertime] = useState<boolean>(() => {
@@ -34,6 +34,25 @@ export default function PomodoroTimer() {
     return saved !== null ? JSON.parse(saved) : false
   })
 
+  // Calcula o timeLeft inicial com base no timestamp real caso estivesse a correr
+  const [timeLeft, setTimeLeft] = useState<number>(() => {
+    const savedRunning = localStorage.getItem('taskflow_pomodoro_isRunning')
+    const isRunningVal = savedRunning !== null ? JSON.parse(savedRunning) : false
+    const savedTarget = localStorage.getItem('taskflow_pomodoro_targetEndTime')
+
+    if (isRunningVal && savedTarget) {
+      const target = parseInt(savedTarget, 10)
+      const diff = Math.floor((target - Date.now()) / 1000)
+      if (diff <= 0) {
+        return 0
+      }
+      return diff
+    }
+
+    const savedTime = localStorage.getItem('taskflow_pomodoro_timeLeft')
+    return savedTime !== null ? parseInt(savedTime, 10) : 25 * 60
+  })
+
   // Sincroniza todas as alterações de estado no localStorage em tempo real
   useEffect(() => {
     localStorage.setItem('taskflow_pomodoro_timeLeft', timeLeft.toString())
@@ -42,31 +61,52 @@ export default function PomodoroTimer() {
     localStorage.setItem('taskflow_pomodoro_isOvertime', JSON.stringify(isOvertime))
     localStorage.setItem('taskflow_pomodoro_overtimeSeconds', overtimeSeconds.toString())
     localStorage.setItem('taskflow_pomodoro_showPopup', JSON.stringify(showPopup))
-  }, [timeLeft, isRunning, mode, isOvertime, overtimeSeconds, showPopup])
+    if (targetEndTime) {
+      localStorage.setItem('taskflow_pomodoro_targetEndTime', targetEndTime.toString())
+    } else {
+      localStorage.removeItem('taskflow_pomodoro_targetEndTime')
+    }
+  }, [timeLeft, isRunning, mode, isOvertime, overtimeSeconds, showPopup, targetEndTime])
 
+  // Lógica do temporizador baseada em tempo real (timestamp)
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null
     if (isRunning) {
       timer = setInterval(() => {
-        if (timeLeft > 0) {
-          setTimeLeft((prev) => {
-            if (prev === 1) {
-              setIsOvertime(true)
-              setShowPopup(true)
-            }
-            return prev - 1
-          })
-        } else {
-          setOvertimeSeconds((prev) => prev + 1)
+        if (targetEndTime) {
+          const now = Date.now()
+          const diff = Math.floor((targetEndTime - now) / 1000)
+          if (diff <= 0) {
+            setTimeLeft(0)
+            setIsOvertime(true)
+            setShowPopup(true)
+            setOvertimeSeconds(Math.abs(diff))
+          } else {
+            setTimeLeft(diff)
+          }
         }
       }, 1000)
     }
     return () => {
       if (timer) clearInterval(timer)
     }
-  }, [isRunning, timeLeft])
+  }, [isRunning, targetEndTime])
 
-  const toggleTimer = () => setIsRunning(!isRunning)
+  const toggleTimer = () => {
+    if (!isRunning) {
+      const duration = timeLeft > 0 ? timeLeft : (mode === 'focus' ? 25 * 60 : 5 * 60)
+      setTargetEndTime(Date.now() + duration * 1000)
+      setIsRunning(true)
+      if (isOvertime) {
+        setIsOvertime(false)
+        setOvertimeSeconds(0)
+        setShowPopup(false)
+      }
+    } else {
+      setIsRunning(false)
+      setTargetEndTime(null)
+    }
+  }
 
   const resetTimer = (newMode: PomodoroMode = mode) => {
     setIsRunning(false)
@@ -74,12 +114,19 @@ export default function PomodoroTimer() {
     setOvertimeSeconds(0)
     setShowPopup(false)
     setMode(newMode)
+    setTargetEndTime(null)
     setTimeLeft(newMode === 'focus' ? 25 * 60 : 5 * 60)
   }
 
   const handleSwitchModeAfterLimit = (targetMode: PomodoroMode) => {
-    resetTimer(targetMode)
+    const duration = targetMode === 'focus' ? 25 * 60 : 5 * 60
     setIsRunning(true)
+    setIsOvertime(false)
+    setOvertimeSeconds(0)
+    setShowPopup(false)
+    setMode(targetMode)
+    setTargetEndTime(Date.now() + duration * 1000)
+    setTimeLeft(duration)
   }
 
   const minutes = Math.floor(timeLeft / 60)
