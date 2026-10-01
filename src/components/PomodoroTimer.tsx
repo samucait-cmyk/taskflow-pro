@@ -4,12 +4,45 @@ import { motion, AnimatePresence } from 'framer-motion'
 export type PomodoroMode = 'focus' | 'break'
 
 export default function PomodoroTimer() {
-  const [timeLeft, setTimeLeft] = useState<number>(25 * 60)
-  const [isRunning, setIsRunning] = useState<boolean>(false)
-  const [mode, setMode] = useState<PomodoroMode>('focus')
-  const [isOvertime, setIsOvertime] = useState<boolean>(false)
-  const [overtimeSeconds, setOvertimeSeconds] = useState<number>(0)
-  const [showPopup, setShowPopup] = useState<boolean>(false)
+  const [timeLeft, setTimeLeft] = useState<number>(() => {
+    const saved = localStorage.getItem('taskflow_pomodoro_timeLeft')
+    return saved !== null ? parseInt(saved, 10) : 25 * 60
+  })
+
+  const [isRunning, setIsRunning] = useState<boolean>(() => {
+    const saved = localStorage.getItem('taskflow_pomodoro_isRunning')
+    return saved !== null ? JSON.parse(saved) : false
+  })
+
+  const [mode, setMode] = useState<PomodoroMode>(() => {
+    const saved = localStorage.getItem('taskflow_pomodoro_mode')
+    return (saved as PomodoroMode) || 'focus'
+  })
+
+  const [isOvertime, setIsOvertime] = useState<boolean>(() => {
+    const saved = localStorage.getItem('taskflow_pomodoro_isOvertime')
+    return saved !== null ? JSON.parse(saved) : false
+  })
+
+  const [overtimeSeconds, setOvertimeSeconds] = useState<number>(() => {
+    const saved = localStorage.getItem('taskflow_pomodoro_overtimeSeconds')
+    return saved !== null ? parseInt(saved, 10) : 0
+  })
+
+  const [showPopup, setShowPopup] = useState<boolean>(() => {
+    const saved = localStorage.getItem('taskflow_pomodoro_showPopup')
+    return saved !== null ? JSON.parse(saved) : false
+  })
+
+  // Sincroniza todas as alterações de estado no localStorage em tempo real
+  useEffect(() => {
+    localStorage.setItem('taskflow_pomodoro_timeLeft', timeLeft.toString())
+    localStorage.setItem('taskflow_pomodoro_isRunning', JSON.stringify(isRunning))
+    localStorage.setItem('taskflow_pomodoro_mode', mode)
+    localStorage.setItem('taskflow_pomodoro_isOvertime', JSON.stringify(isOvertime))
+    localStorage.setItem('taskflow_pomodoro_overtimeSeconds', overtimeSeconds.toString())
+    localStorage.setItem('taskflow_pomodoro_showPopup', JSON.stringify(showPopup))
+  }, [timeLeft, isRunning, mode, isOvertime, overtimeSeconds, showPopup])
 
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null
