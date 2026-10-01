@@ -6,6 +6,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178C6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.x-38Bdf8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
 [![Framer Motion](https://img.shields.io/badge/Framer_Motion-Animation-0055FF?style=for-the-badge&logo=framer&logoColor=white)](https://www.framer.com/motion/)
+[![Vitest](https://img.shields.io/badge/Vitest-Testing-6E9F18?style=for-the-badge&logo=vitest&logoColor=white)](https://vitest.dev/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
 
 *Uma suíte de produtividade moderna, de alta performance e arquitetura Local-First, combinando Gestão Kanban e Temporizador Pomodoro de precisão cirúrgica.*
@@ -53,13 +54,19 @@ Abordagens tradicionais baseadas em `setInterval` de 1 segundo falham quando o n
 - **Estilização:** [Tailwind CSS](https://tailwindcss.com/) (*Design System* utilitário e responsivo).
 - **Animações:** [Framer Motion](https://www.framer.com/motion/) (Transições fluidas e micro-interações).
 - **Build Tool:** [Vite](https://vitejs.dev/) (Empacotador ultrarrápido).
+- **Testes Automatizados:** [Vitest](https://vitest.dev/) com [React Testing Library](https://testing-library.com/docs/react-testing-library/intro/) e `jsdom`.
 
 ---
 
-## ⚙️ Como Executar o Projeto Localmente
+## 🧪 Testes Automatizados
 
-Certifique-se de ter o **Node.js** (versão 18 ou superior) instalado na sua máquina.
+O projeto conta com uma suíte de testes unitários configurada para blindar os componentes principais (como o temporizador Pomodoro) contra regressões e garantir estabilidade contínua.
 
-1. **Clone o repositório:**
-   ```bash
-   git clone [https://github.com/samucait-cmyk/taskflow-pro.git](https://github.com/samucait-cmyk/taskflow-pro.git)
+Para executar os testes localmente:
+
+```bash
+# Executar os testes em modo interativo (Watch Mode)
+npm run test
+
+# Executar os testes uma única vez (Ideal parapipelines de CI/CD)
+npx vitest run
