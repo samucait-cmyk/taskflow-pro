@@ -40,7 +40,7 @@ O **TaskFlow Pro** é uma aplicação web moderna inspirada em sistemas corporat
 
 ```bash
 # 1. Clone o repositório
-git clone [https://github.com/samucait-cmyk/taskflow-pro.git](https://github.com/samucait-cmyk/taskflow-pro.git)
+git clone https://github.com/samucait-cmyk/taskflow-pro.git
 
 # 2. Acesse a pasta do projeto
 cd taskflow-pro
