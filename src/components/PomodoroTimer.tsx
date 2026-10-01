@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 
+export type PomodoroMode = 'focus' | 'break'
+
 export default function PomodoroTimer() {
-  const [timeLeft, setTimeLeft] = useState(25 * 60)
-  const [isRunning, setIsRunning] = useState(false)
-  const [mode, setMode] = useState('focus')
-  const [isOvertime, setIsOvertime] = useState(false)
-  const [overtimeSeconds, setOvertimeSeconds] = useState(0)
-  const [showPopup, setShowPopup] = useState(false)
+  const [timeLeft, setTimeLeft] = useState<number>(25 * 60)
+  const [isRunning, setIsRunning] = useState<boolean>(false)
+  const [mode, setMode] = useState<PomodoroMode>('focus')
+  const [isOvertime, setIsOvertime] = useState<boolean>(false)
+  const [overtimeSeconds, setOvertimeSeconds] = useState<number>(0)
+  const [showPopup, setShowPopup] = useState<boolean>(false)
 
   useEffect(() => {
-    let timer = null
+    let timer: ReturnType<typeof setInterval> | null = null
     if (isRunning) {
       timer = setInterval(() => {
         if (timeLeft > 0) {
@@ -26,12 +28,14 @@ export default function PomodoroTimer() {
         }
       }, 1000)
     }
-    return () => clearInterval(timer)
+    return () => {
+      if (timer) clearInterval(timer)
+    }
   }, [isRunning, timeLeft])
 
   const toggleTimer = () => setIsRunning(!isRunning)
 
-  const resetTimer = (newMode = mode) => {
+  const resetTimer = (newMode: PomodoroMode = mode) => {
     setIsRunning(false)
     setIsOvertime(false)
     setOvertimeSeconds(0)
@@ -40,7 +44,7 @@ export default function PomodoroTimer() {
     setTimeLeft(newMode === 'focus' ? 25 * 60 : 5 * 60)
   }
 
-  const handleSwitchModeAfterLimit = (targetMode) => {
+  const handleSwitchModeAfterLimit = (targetMode: PomodoroMode) => {
     resetTimer(targetMode)
     setIsRunning(true)
   }

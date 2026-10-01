@@ -1,8 +1,21 @@
-export default function Dashboard({ tasks = [] }) {
+import { Task } from './TaskCard'
+
+interface DashboardProps {
+  tasks?: Task[]
+}
+
+interface MetricItem {
+  id: string
+  label: string
+  color: string
+  barBg: string
+}
+
+export default function Dashboard({ tasks = [] }: DashboardProps) {
   const totalTasks = tasks.length
 
-  const getCount = (status) => tasks.filter((t) => t.status === status).length
-  const getPercentage = (status) => {
+  const getCount = (status: string) => tasks.filter((t) => t.status === status).length
+  const getPercentage = (status: string) => {
     if (totalTasks === 0) return 0
     return Math.round((getCount(status) / totalTasks) * 100)
   }
@@ -10,7 +23,7 @@ export default function Dashboard({ tasks = [] }) {
   const doneCount = getCount('done')
   const completionRate = totalTasks > 0 ? Math.round((doneCount / totalTasks) * 100) : 0
 
-  const metrics = [
+  const metrics: MetricItem[] = [
     { id: 'todo', label: 'A Fazer', color: 'bg-amber-500', barBg: 'bg-amber-500/20' },
     { id: 'blocked', label: 'Bloqueado', color: 'bg-rose-500', barBg: 'bg-rose-500/20' },
     { id: 'in_progress', label: 'Em Andamento', color: 'bg-indigo-500', barBg: 'bg-indigo-500/20' },

@@ -1,6 +1,12 @@
 import { motion } from 'framer-motion'
+import { Task } from './TaskCard'
 
-const STATUS_LABELS = {
+interface StatusInfo {
+  label: string
+  badge: string
+}
+
+const STATUS_LABELS: Record<string, StatusInfo> = {
   todo: { label: 'A Fazer', badge: 'bg-amber-500/10 text-amber-400 border-amber-500/30' },
   blocked: { label: 'Bloqueado', badge: 'bg-rose-500/10 text-rose-400 border-rose-500/30' },
   in_progress: { label: 'Em Andamento', badge: 'bg-indigo-500/10 text-indigo-400 border-indigo-500/30' },
@@ -9,7 +15,13 @@ const STATUS_LABELS = {
   done: { label: 'Concluído', badge: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/30' },
 }
 
-export default function TableView({ tasks = [], onEdit, onDelete }) {
+interface TableViewProps {
+  tasks?: Task[]
+  onEdit: (task: Task) => void
+  onDelete: (id: string) => void
+}
+
+export default function TableView({ tasks = [], onEdit, onDelete }: TableViewProps) {
   if (!tasks || tasks.length === 0) {
     return (
       <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-12 text-center text-slate-500">
@@ -65,7 +77,7 @@ export default function TableView({ tasks = [], onEdit, onDelete }) {
                           : 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
                       }`}
                     >
-                      {task.priority}
+                      {task.priority || 'Média'}
                     </span>
                   </td>
                   <td className="py-3 px-4">

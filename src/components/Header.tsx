@@ -1,15 +1,25 @@
 import PomodoroTimer from './PomodoroTimer'
 
+interface HeaderProps {
+  onNewTask: () => void
+  onIncreaseFont?: () => void
+  onDecreaseFont?: () => void
+  currentFontSize?: number
+  isFocusMode?: boolean
+  onToggleFocusMode?: () => void
+  theme?: string
+  setTheme: (theme: string) => void
+}
+
 export default function Header({
   onNewTask,
   onIncreaseFont,
   onDecreaseFont,
-  currentFontSize,
   isFocusMode,
   onToggleFocusMode,
   theme,
   setTheme,
-}) {
+}: HeaderProps) {
   return (
     <header className="bg-slate-900/90 border-b border-slate-800 backdrop-blur-md sticky top-0 z-40 px-3 sm:px-6 py-3">
       <div className="max-w-[1600px] mx-auto flex flex-col md:flex-row items-center justify-between gap-3">

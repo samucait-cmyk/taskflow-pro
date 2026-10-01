@@ -1,8 +1,16 @@
 import React, { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import TaskCard from './TaskCard'
+import TaskCard, { Task } from './TaskCard'
 
-const COLUMN_CONFIG = {
+interface ColumnConfigItem {
+  label: string
+  badge: string
+  dot: string
+  border: string
+  defaultLimit: number
+}
+
+const COLUMN_CONFIG: Record<string, ColumnConfigItem> = {
   todo: {
     label: 'A Fazer',
     badge: 'bg-amber-500/10 text-amber-400 border-amber-500/30',
@@ -47,6 +55,31 @@ const COLUMN_CONFIG = {
   },
 }
 
+export interface ColumnData {
+  id?: string
+  title?: string
+  wipLimit?: number
+}
+
+interface KanbanColumnProps {
+  title?: string
+  status?: string
+  color?: string
+  dotColor?: string
+  maxLimit?: number
+  column?: ColumnData
+  tasks?: Task[]
+  allTasks?: Task[]
+  onEdit: (task: Task) => void
+  onDelete: (id: string) => void
+  onMove?: (taskId: string, newStatus: string) => void
+  onStatusChange?: (taskId: string, newStatus: string) => void
+  onToggleChecklist?: (taskId: string, index: number) => void
+  onQuickAdd?: (status: string) => void
+  onUpdateWipLimit?: (status: string, newLimit: number) => void
+  onAddSubtaskInline?: (taskId: string, text: string) => void
+}
+
 export default function KanbanColumn({
   title,
   status,
@@ -63,7 +96,8 @@ export default function KanbanColumn({
   onToggleChecklist,
   onQuickAdd,
   onUpdateWipLimit,
-}) {
+  onAddSubtaskInline,
+}: KanbanColumnProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
   const currentStatus = status || (column && column.id) || 'todo'
@@ -78,19 +112,19 @@ export default function KanbanColumn({
   const isWipExceeded = taskCount > limit
   const wipPercentage = Math.min(Math.round((taskCount / limit) * 100), 100)
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
     if (!isDragOver) setIsDragOver(true)
   }
 
-  const handleDragLeave = (e) => {
-    if (!e.currentTarget.contains(e.relatedTarget)) {
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
       setIsDragOver(false)
     }
   }
 
-  const handleDrop = (e) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault()
     setIsDragOver(false)
     const taskId = e.dataTransfer.getData('text/plain')
@@ -104,7 +138,7 @@ export default function KanbanColumn({
   }
 
   const handleEditWipPrompt = () => {
-    const newLimitStr = prompt(`Digite o novo Limite WIP para a coluna "${displayTitle}":`, limit)
+    const newLimitStr = prompt(`Digite o novo Limite WIP para a coluna "${displayTitle}":`, limit.toString())
     if (newLimitStr !== null) {
       const parsed = parseInt(newLimitStr, 10)
       if (!isNaN(parsed) && parsed > 0 && onUpdateWipLimit) {
@@ -215,6 +249,7 @@ export default function KanbanColumn({
                   onMove={onMove}
                   onStatusChange={onStatusChange}
                   onToggleChecklist={onToggleChecklist}
+                  onAddSubtaskInline={onAddSubtaskInline}
                 />
               </motion.div>
             ))

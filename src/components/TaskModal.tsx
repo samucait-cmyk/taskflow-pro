@@ -1,5 +1,14 @@
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
+import { Task, ChecklistItem } from './TaskCard'
+
+interface TaskModalProps {
+  isOpen?: boolean
+  onClose: () => void
+  onSave: (taskData: Omit<Task, 'id' | 'createdAt'>) => void
+  taskToEdit?: Task | null
+  allTasks?: Task[]
+}
 
 export default function TaskModal({
   isOpen = false,
@@ -7,18 +16,18 @@ export default function TaskModal({
   onSave,
   taskToEdit,
   allTasks = [],
-}) {
+}: TaskModalProps) {
   if (!isOpen) return null
 
-  const [title, setTitle] = useState('')
-  const [description, setDescription] = useState('')
-  const [status, setStatus] = useState('todo')
-  const [priority, setPriority] = useState('Alta')
-  const [tag, setTag] = useState('Design')
-  const [dueDate, setDueDate] = useState('')
-  const [dependencyId, setDependencyId] = useState('')
-  const [checklist, setChecklist] = useState([])
-  const [newSubtask, setNewSubtask] = useState('')
+  const [title, setTitle] = useState<string>('')
+  const [description, setDescription] = useState<string>('')
+  const [status, setStatus] = useState<string>('todo')
+  const [priority, setPriority] = useState<string>('Alta')
+  const [tag, setTag] = useState<string>('Design')
+  const [dueDate, setDueDate] = useState<string>('')
+  const [dependencyId, setDependencyId] = useState<string>('')
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([])
+  const [newSubtask, setNewSubtask] = useState<string>('')
 
   useEffect(() => {
     if (taskToEdit) {
@@ -48,11 +57,11 @@ export default function TaskModal({
     setNewSubtask('')
   }
 
-  const handleRemoveSubtask = (idx) => {
+  const handleRemoveSubtask = (idx: number) => {
     setChecklist(checklist.filter((_, i) => i !== idx))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!title.trim()) return
     onSave({

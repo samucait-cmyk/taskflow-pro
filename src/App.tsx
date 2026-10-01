@@ -1,12 +1,13 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, ChangeEvent } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Header from './components/Header'
 import Dashboard from './components/Dashboard'
 import KanbanColumn from './components/KanbanColumn'
 import TableView from './components/TableView'
 import TaskModal from './components/TaskModal'
+import { Task, Column } from './types/kanban'
 
-const COLUMNS = [
+const COLUMNS: Column[] = [
   { id: 'todo', title: 'A Fazer' },
   { id: 'blocked', title: 'Bloqueado' },
   { id: 'in_progress', title: 'Em Andamento' },
@@ -15,7 +16,7 @@ const COLUMNS = [
   { id: 'done', title: 'Concluído' },
 ]
 
-const DEFAULT_WIP_LIMITS = {
+const DEFAULT_WIP_LIMITS: Record<string, number> = {
   todo: 5,
   blocked: 3,
   in_progress: 4,
@@ -24,8 +25,7 @@ const DEFAULT_WIP_LIMITS = {
   done: 10,
 }
 
-// Configuração de temas de cores
-const THEME_CLASSES = {
+const THEME_CLASSES: Record<string, string> = {
   slate: 'bg-slate-950 text-slate-100',
   emerald: 'bg-zinc-950 text-emerald-100',
   obsidian: 'bg-neutral-950 text-purple-100',
@@ -33,7 +33,7 @@ const THEME_CLASSES = {
 }
 
 export default function App() {
-  const [tasks, setTasks] = useState(() => {
+  const [tasks, setTasks] = useState<Task[]>(() => {
     const saved = localStorage.getItem('taskflow_tasks')
     if (saved) {
       try {
@@ -79,7 +79,7 @@ export default function App() {
     ]
   })
 
-  const [wipLimits, setWipLimits] = useState(() => {
+  const [wipLimits, setWipLimits] = useState<Record<string, number>>(() => {
     const saved = localStorage.getItem('taskflow_wip_limits')
     if (saved) {
       try {
@@ -91,29 +91,26 @@ export default function App() {
     return DEFAULT_WIP_LIMITS
   })
 
-  // Estado do Tema de Cores
-  const [theme, setTheme] = useState(() => {
+  const [theme, setTheme] = useState<string>(() => {
     return localStorage.getItem('taskflow_theme') || 'slate'
   })
 
-  // Filtros e Modos Visuais
-  const [search, setSearch] = useState('')
-  const [priorityFilter, setPriorityFilter] = useState('')
-  const [tagFilter, setTagFilter] = useState('')
-  const [sortBy, setSortBy] = useState('default')
-  const [viewMode, setViewMode] = useState('kanban')
-  const [fontSize, setFontSize] = useState(16)
-  const [onlyOverdue, setOnlyOverdue] = useState(false)
-  const [isFocusMode, setIsFocusMode] = useState(false)
+  const [search, setSearch] = useState<string>('')
+  const [priorityFilter, setPriorityFilter] = useState<string>('')
+  const [tagFilter, setTagFilter] = useState<string>('')
+  const [sortBy, setSortBy] = useState<string>('default')
+  const [viewMode, setViewMode] = useState<'kanban' | 'table'>('kanban')
+  const [fontSize, setFontSize] = useState<number>(16)
+  const [onlyOverdue, setOnlyOverdue] = useState<boolean>(false)
+  const [isFocusMode, setIsFocusMode] = useState<boolean>(false)
 
-  // Modais e Toasts
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [editingTask, setEditingTask] = useState(null)
-  const [toast, setToast] = useState(null)
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false)
+  const [editingTask, setEditingTask] = useState<Partial<Task> | null>(null)
+  const [toast, setToast] = useState<{ message: string; type?: string } | null>(null)
 
-  const fileInputRef = useRef(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const showToast = (message, type = 'success') => {
+  const showToast = (message: string, type = 'success') => {
     setToast({ message, type })
     setTimeout(() => {
       setToast(null)
@@ -140,7 +137,7 @@ export default function App() {
     localStorage.setItem('taskflow_theme', theme)
   }, [theme])
 
-  const handleUpdateWipLimit = (columnId, newLimit) => {
+  const handleUpdateWipLimit = (columnId: string, newLimit: number) => {
     setWipLimits((prev) => ({ ...prev, [columnId]: newLimit }))
     showToast(`Limite WIP atualizado para ${newLimit}!`)
   }
@@ -154,7 +151,6 @@ export default function App() {
     showToast('Filtros redefinidos!', 'info')
   }
 
-  // Filtragem
   const filteredTasks = tasks.filter((task) => {
     const matchesSearch =
       task.title.toLowerCase().includes(search.toLowerCase()) ||
@@ -177,10 +173,9 @@ export default function App() {
     return matchesSearch && matchesPriority && matchesTag && matchesOverdue
   })
 
-  // Ordenação
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     if (sortBy === 'priority') {
-      const weights = { Urgente: 4, Alta: 3, Média: 2, Baixa: 1 }
+      const weights: Record<string, number> = { Urgente: 4, Alta: 3, Média: 2, Baixa: 1 }
       return (weights[b.priority] || 0) - (weights[a.priority] || 0)
     }
     if (sortBy === 'dueDate') {
@@ -191,12 +186,12 @@ export default function App() {
     return 0
   })
 
-  const handleCreateOrUpdateTask = (taskData) => {
-    if (editingTask) {
-      setTasks(tasks.map((t) => (t.id === editingTask.id ? { ...t, ...taskData } : t)))
+  const handleCreateOrUpdateTask = (taskData: Omit<Task, 'id'>) => {
+    if (editingTask && editingTask.id) {
+      setTasks(tasks.map((t) => (t.id === editingTask.id ? ({ ...t, ...taskData } as Task) : t)))
       showToast('Tarefa atualizada com sucesso!')
     } else {
-      const newTask = {
+      const newTask: Task = {
         id: Date.now().toString(),
         ...taskData,
       }
@@ -207,33 +202,38 @@ export default function App() {
     setIsModalOpen(false)
   }
 
-  const handleDeleteTask = (taskId) => {
+  const handleDeleteTask = (taskId: string) => {
     setTasks(tasks.filter((t) => t.id !== taskId))
     showToast('Tarefa eliminada!', 'info')
   }
 
-  const handleEditTask = (task) => {
+  const handleEditTask = (task: Task) => {
     setEditingTask(task)
     setIsModalOpen(true)
   }
 
-  const handleStatusChange = (taskId, newStatus) => {
+  const handleStatusChange = (taskId: string, newStatus: string) => {
     setTasks(tasks.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)))
     showToast('Estado da tarefa atualizado!')
   }
 
-  const handleToggleChecklist = (taskId, subtaskIdx) => {
+  const handleToggleChecklist = (taskId: string, subtaskIdx: number) => {
     setTasks(
       tasks.map((task) => {
         if (task.id !== taskId) return task
         const updatedChecklist = [...(task.checklist || [])]
-        updatedChecklist[subtaskIdx].completed = !updatedChecklist[subtaskIdx].completed
+        if (updatedChecklist[subtaskIdx]) {
+          updatedChecklist[subtaskIdx] = {
+            ...updatedChecklist[subtaskIdx],
+            completed: !updatedChecklist[subtaskIdx].completed,
+          }
+        }
         return { ...task, checklist: updatedChecklist }
       })
     )
   }
 
-  const handleAddSubtaskInline = (taskId, text) => {
+  const handleAddSubtaskInline = (taskId: string, text: string) => {
     setTasks(
       tasks.map((task) => {
         if (task.id !== taskId) return task
@@ -244,7 +244,6 @@ export default function App() {
     showToast('Subtarefa adicionada!')
   }
 
-  // Backups
   const handleExportBackup = () => {
     const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(tasks, null, 2))
     const downloadAnchor = document.createElement('a')
@@ -283,20 +282,20 @@ export default function App() {
     showToast('Planilha CSV gerada!')
   }
 
-  const handleImportBackup = (e) => {
+  const handleImportBackup = (e: ChangeEvent<HTMLInputElement>) => {
     const fileReader = new FileReader()
     if (e.target.files && e.target.files[0]) {
       fileReader.readAsText(e.target.files[0], 'UTF-8')
       fileReader.onload = (event) => {
         try {
-          const importedTasks = JSON.parse(event.target.result)
+          const importedTasks = JSON.parse(event.target?.result as string)
           if (Array.isArray(importedTasks)) {
             setTasks(importedTasks)
             showToast('Backup importado!')
           } else {
             showToast('Ficheiro inválido.', 'error')
           }
-        } catch (error) {
+        } catch {
           showToast('Erro ao ler ficheiro.', 'error')
         }
       }
@@ -322,7 +321,6 @@ export default function App() {
       />
 
       <main className="flex-1 p-4 sm:p-6 max-w-[1600px] w-full mx-auto flex flex-col gap-6">
-        {/* Painéis Superiores */}
         {!isFocusMode && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
@@ -343,7 +341,6 @@ export default function App() {
           </motion.div>
         )}
 
-        {/* Barra de Filtros */}
         <div className="flex flex-col lg:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
           <div className="relative flex-1 w-full">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
@@ -359,7 +356,6 @@ export default function App() {
           </div>
 
           <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full lg:w-auto flex-wrap">
-            {/* Filtro por Prioridade */}
             <select
               value={priorityFilter}
               onChange={(e) => setPriorityFilter(e.target.value)}
@@ -372,7 +368,6 @@ export default function App() {
               <option value="Urgente">Urgente</option>
             </select>
 
-            {/* Filtro por Tag */}
             <select
               value={tagFilter}
               onChange={(e) => setTagFilter(e.target.value)}
@@ -386,7 +381,6 @@ export default function App() {
               <option value="DevOps">DevOps</option>
             </select>
 
-            {/* Ordenação */}
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
@@ -397,7 +391,6 @@ export default function App() {
               <option value="dueDate">📅 Data Limite (Mais Urgente)</option>
             </select>
 
-            {/* Botão Atrasadas */}
             <button
               onClick={() => setOnlyOverdue(!onlyOverdue)}
               className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
@@ -409,7 +402,6 @@ export default function App() {
               ⚠️ Atrasadas
             </button>
 
-            {/* Limpar Filtros */}
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
@@ -419,7 +411,6 @@ export default function App() {
               </button>
             )}
 
-            {/* Backups */}
             <div className="col-span-2 sm:col-span-auto flex items-center gap-1.5 w-full sm:w-auto">
               <button
                 onClick={handleExportBackup}
@@ -454,7 +445,6 @@ export default function App() {
               </button>
             </div>
 
-            {/* Alternador Kanban / Tabela */}
             <div className="col-span-2 sm:col-span-auto flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
               <button
                 onClick={() => setViewMode('kanban')}
@@ -480,12 +470,10 @@ export default function App() {
           </div>
         </div>
 
-        {/* Contador */}
         <div className="text-xs text-slate-400 font-medium px-1">
           Mostrando <span className="text-slate-200 font-bold">{sortedTasks.length}</span> de {tasks.length} tarefas
         </div>
 
-        {/* Kanban ou Tabela */}
         <AnimatePresence mode="wait">
           {viewMode === 'kanban' ? (
             <motion.div
@@ -511,7 +499,7 @@ export default function App() {
                     onToggleChecklist={handleToggleChecklist}
                     onAddSubtaskInline={handleAddSubtaskInline}
                     onUpdateWipLimit={handleUpdateWipLimit}
-                    onQuickAdd={(colId) => {
+                    onQuickAdd={(colId: string) => {
                       setEditingTask({ status: colId })
                       setIsModalOpen(true)
                     }}
@@ -530,7 +518,6 @@ export default function App() {
         </AnimatePresence>
       </main>
 
-      {/* Modal */}
       <TaskModal
         isOpen={isModalOpen}
         onClose={() => {
@@ -542,7 +529,6 @@ export default function App() {
         allTasks={tasks}
       />
 
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div

@@ -1,23 +1,60 @@
+import React from 'react'
+
+export interface ChecklistItem {
+  text: string
+  completed: boolean
+}
+
+export interface Task {
+  id: string
+  title: string
+  description?: string
+  status: string
+  priority?: 'Urgente' | 'Alta' | 'Média' | 'Baixa' | 'urgent' | 'high' | 'medium' | 'low' | string
+  dueDate?: string
+  tag?: string
+  checklist?: ChecklistItem[]
+  dependentOn?: string
+  [key: string]: any
+}
+
+export interface TaskCardProps {
+  task: Task
+  allTasks?: Task[]
+  onEdit: (task: Task) => void
+  onDelete: (id: string) => void
+  onToggleChecklist?: (taskId: string, index: number) => void
+  onStatusChange?: (taskId: string, newStatus: string) => void
+  onMove?: (taskId: string, newStatus: string) => void
+  onAddSubtaskInline?: (taskId: string, text: string) => void
+}
+
 const WORKFLOW_STAGES = ['todo', 'blocked', 'in_progress', 'ready_to_test', 'testing', 'done']
 
 export default function TaskCard({
   task,
+  allTasks = [],
   onEdit,
   onDelete,
   onToggleChecklist,
   onStatusChange,
   onMove,
-}) {
-  const handleDragStart = (e) => {
+}: TaskCardProps) {
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
     e.dataTransfer.setData('text/plain', task.id)
     e.dataTransfer.effectAllowed = 'move'
   }
 
-  const priorityColors = {
+  // Suporte abrangente para prioridades em Português e Inglês
+  const priorityColors: Record<string, string> = {
     Urgente: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+    urgent: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
     Alta: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+    high: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
     Média: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+    medium: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
     Baixa: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
+    low: 'bg-slate-500/20 text-slate-300 border-slate-500/30',
   }
 
   const checklist = task.checklist || []
@@ -33,10 +70,14 @@ export default function TaskCard({
     return due < today
   })()
 
+  // Verificação de dependência bloqueada
+  const dependentTask = allTasks.find((t) => t.id === task.dependentOn)
+  const isBlockedByDependency = dependentTask && dependentTask.status !== 'done'
+
   // Navegação do cartão pelas setas
   const currentIndex = WORKFLOW_STAGES.indexOf(task.status)
 
-  const moveTask = (targetStatus) => {
+  const moveTask = (targetStatus: string) => {
     if (onStatusChange) {
       onStatusChange(task.id, targetStatus)
     } else if (onMove) {
@@ -72,7 +113,7 @@ export default function TaskCard({
         <div className="flex items-center gap-1 shrink-0">
           {isOverdue && (
             <span className="text-[10px] bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full font-bold animate-pulse">
-              ⚠️️ Atrasado
+              ⚠ Atrasado
             </span>
           )}
           {task.priority && (
@@ -85,9 +126,17 @@ export default function TaskCard({
 
       {/* Descrição */}
       {task.description && (
-        <p className="text-[11px] text-slate-400 line-clamp-2">
+        <p className="text-[11px] text-slate-400 line-click-2 line-clamp-2">
           {task.description}
         </p>
+      )}
+
+      {/* Alerta de Dependência */}
+      {isBlockedByDependency && (
+        <div className="flex items-center gap-1.5 px-2 py-1 rounded bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px]">
+          <span>🔒 Bloqueada por:</span>
+          <span className="font-semibold truncate">{dependentTask.title}</span>
+        </div>
       )}
 
       {/* Tags e Data Limite */}

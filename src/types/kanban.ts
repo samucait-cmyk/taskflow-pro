@@ -1,18 +1,20 @@
-export type Priority = 'low' | 'medium' | 'high';
+export interface Subtask {
+  text: string
+  completed: boolean
+}
 
 export interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  columnId: string;
-  priority: Priority;
-  createdAt: string;
+  id: string
+  title: string
+  description?: string
+  status: string
+  priority: string
+  tag: string
+  dueDate?: string
+  checklist?: Subtask[]
 }
 
 export interface Column {
-  id: string;
-  title: string;
-  wipLimit?: number;
+  id: string
+  title: string
 }
-
-export type Theme = 'light' | 'dark' | 'dracula' | 'nord';
