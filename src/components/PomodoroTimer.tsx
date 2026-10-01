@@ -35,6 +35,12 @@ const playNotificationSound = () => {
   }
 }
 
+// Chave para o localStorage baseada na data de hoje (YYYY-MM-DD)
+const getTodayCycleKey = () => {
+  const todayStr = new Date().toISOString().split('T')[0]
+  return `taskflow_pomodoro_cycles_${todayStr}`
+}
+
 export default function PomodoroTimer() {
   const [mode, setMode] = useState<PomodoroMode>(() => {
     const saved = localStorage.getItem('taskflow_pomodoro_mode')
@@ -64,6 +70,13 @@ export default function PomodoroTimer() {
   const [showPopup, setShowPopup] = useState<boolean>(() => {
     const saved = localStorage.getItem('taskflow_pomodoro_showPopup')
     return saved !== null ? JSON.parse(saved) : false
+  })
+
+  // Estado para os ciclos concluídos hoje
+  const [completedCycles, setCompletedCycles] = useState<number>(() => {
+    const key = getTodayCycleKey()
+    const saved = localStorage.getItem(key)
+    return saved !== null ? parseInt(saved, 10) : 0
   })
 
   const [timeLeft, setTimeLeft] = useState<number>(() => {
@@ -120,7 +133,13 @@ export default function PomodoroTimer() {
     }
   }, [timeLeft, isRunning, mode, isOvertime, overtimeSeconds, showPopup, targetEndTime])
 
-  // Lógica do temporizador com timestamp e disparo de som
+  // Sincroniza ciclos diários
+  useEffect(() => {
+    const key = getTodayCycleKey()
+    localStorage.setItem(key, completedCycles.toString())
+  }, [completedCycles])
+
+  // Lógica do temporizador com timestamp, som e incremento de ciclos
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null
     if (isRunning) {
@@ -131,6 +150,9 @@ export default function PomodoroTimer() {
           if (diff <= 0) {
             if (!isOvertime) {
               playNotificationSound() // Toca o som exatamente quando o tempo esgota
+              if (mode === 'focus') {
+                setCompletedCycles((prev) => prev + 1)
+              }
             }
             setTimeLeft(0)
             setIsOvertime(true)
@@ -145,7 +167,7 @@ export default function PomodoroTimer() {
     return () => {
       if (timer) clearInterval(timer)
     }
-  }, [isRunning, targetEndTime, isOvertime])
+  }, [isRunning, targetEndTime, isOvertime, mode])
 
   const toggleTimer = () => {
     if (!isRunning) {
@@ -206,6 +228,12 @@ export default function PomodoroTimer() {
             {isOvertime ? formattedOvertime : formattedTime}
           </span>
         </div>
+      </div>
+
+      {/* Contador de Ciclos Concluídos Hoje */}
+      <div className="hidden sm:flex items-center gap-1 bg-slate-950/80 border border-slate-800 px-2.5 py-1 rounded-xl text-xs font-medium text-amber-400 shadow-inner" title="Ciclos de foco concluídos hoje">
+        <span>🔥</span>
+        <span className="font-mono font-bold">{completedCycles}</span>
       </div>
 
       <div className="flex items-center gap-1.5 border-l border-slate-800/80 pl-3">
