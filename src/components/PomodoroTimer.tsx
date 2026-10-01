@@ -3,6 +3,38 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 export type PomodoroMode = 'focus' | 'break'
 
+const FOCUS_TIME = 25 * 60
+const BREAK_TIME = 5 * 60
+
+// Função auxiliar para tocar som de notificação sem ficheiros externos (Web Audio API)
+const playNotificationSound = () => {
+  try {
+    const AudioContext = window.AudioContext || (window as any).webkitAudioContext
+    if (!AudioContext) return
+    const ctx = new AudioContext()
+
+    const playTone = (freq: number, startTime: number, duration: number) => {
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.type = 'sine'
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + startTime)
+      gain.gain.setValueAtTime(0.15, ctx.currentTime + startTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + startTime + duration)
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.start(ctx.currentTime + startTime)
+      osc.stop(ctx.currentTime + startTime + duration)
+    }
+
+    // Acorde harmonioso (Chime)
+    playTone(523.25, 0, 0.25)   // C5
+    playTone(659.25, 0.25, 0.25) // E5
+    playTone(783.99, 0.5, 0.5)   // G5
+  } catch (e) {
+    console.error('Erro ao reproduzir som:', e)
+  }
+}
+
 export default function PomodoroTimer() {
   const [mode, setMode] = useState<PomodoroMode>(() => {
     const saved = localStorage.getItem('taskflow_pomodoro_mode')
@@ -34,7 +66,6 @@ export default function PomodoroTimer() {
     return saved !== null ? JSON.parse(saved) : false
   })
 
-  // Calcula o timeLeft inicial com base no timestamp real caso estivesse a correr
   const [timeLeft, setTimeLeft] = useState<number>(() => {
     const savedRunning = localStorage.getItem('taskflow_pomodoro_isRunning')
     const isRunningVal = savedRunning !== null ? JSON.parse(savedRunning) : false
@@ -43,17 +74,38 @@ export default function PomodoroTimer() {
     if (isRunningVal && savedTarget) {
       const target = parseInt(savedTarget, 10)
       const diff = Math.floor((target - Date.now()) / 1000)
-      if (diff <= 0) {
-        return 0
-      }
+      if (diff <= 0) return 0
       return diff
     }
 
     const savedTime = localStorage.getItem('taskflow_pomodoro_timeLeft')
-    return savedTime !== null ? parseInt(savedTime, 10) : 25 * 60
+    return savedTime !== null ? parseInt(savedTime, 10) : FOCUS_TIME
   })
 
-  // Sincroniza todas as alterações de estado no localStorage em tempo real
+  // Efeito para atualizar o Título da Aba do Navegador em tempo real
+  useEffect(() => {
+    const minutes = Math.floor(timeLeft / 60)
+    const seconds = timeLeft % 60
+    const formattedTime = `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+
+    const otMinutes = Math.floor(overtimeSeconds / 60)
+    const otSeconds = overtimeSeconds % 60
+    const formattedOvertime = `+${String(otMinutes).padStart(2, '0')}:${String(otSeconds).padStart(2, '0')}`
+
+    if (isRunning) {
+      const prefix = mode === 'focus' ? '🎯 Foco' : '☕ Pausa'
+      const timeStr = isOvertime ? formattedOvertime : formattedTime
+      document.title = `(${timeStr}) ${prefix} - TaskFlow`
+    } else {
+      document.title = 'TaskFlow Pro - Kanban Local-First'
+    }
+
+    return () => {
+      document.title = 'TaskFlow Pro - Kanban Local-First'
+    }
+  }, [timeLeft, isRunning, mode, isOvertime, overtimeSeconds])
+
+  // Sincroniza estados no localStorage
   useEffect(() => {
     localStorage.setItem('taskflow_pomodoro_timeLeft', timeLeft.toString())
     localStorage.setItem('taskflow_pomodoro_isRunning', JSON.stringify(isRunning))
@@ -68,7 +120,7 @@ export default function PomodoroTimer() {
     }
   }, [timeLeft, isRunning, mode, isOvertime, overtimeSeconds, showPopup, targetEndTime])
 
-  // Lógica do temporizador baseada em tempo real (timestamp)
+  // Lógica do temporizador com timestamp e disparo de som
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null
     if (isRunning) {
@@ -77,6 +129,9 @@ export default function PomodoroTimer() {
           const now = Date.now()
           const diff = Math.floor((targetEndTime - now) / 1000)
           if (diff <= 0) {
+            if (!isOvertime) {
+              playNotificationSound() // Toca o som exatamente quando o tempo esgota
+            }
             setTimeLeft(0)
             setIsOvertime(true)
             setShowPopup(true)
@@ -90,11 +145,11 @@ export default function PomodoroTimer() {
     return () => {
       if (timer) clearInterval(timer)
     }
-  }, [isRunning, targetEndTime])
+  }, [isRunning, targetEndTime, isOvertime])
 
   const toggleTimer = () => {
     if (!isRunning) {
-      const duration = timeLeft > 0 ? timeLeft : (mode === 'focus' ? 25 * 60 : 5 * 60)
+      const duration = timeLeft > 0 ? timeLeft : (mode === 'focus' ? FOCUS_TIME : BREAK_TIME)
       setTargetEndTime(Date.now() + duration * 1000)
       setIsRunning(true)
       if (isOvertime) {
@@ -115,11 +170,12 @@ export default function PomodoroTimer() {
     setShowPopup(false)
     setMode(newMode)
     setTargetEndTime(null)
-    setTimeLeft(newMode === 'focus' ? 25 * 60 : 5 * 60)
+    const defaultTime = newMode === 'focus' ? FOCUS_TIME : BREAK_TIME
+    setTimeLeft(defaultTime)
   }
 
   const handleSwitchModeAfterLimit = (targetMode: PomodoroMode) => {
-    const duration = targetMode === 'focus' ? 25 * 60 : 5 * 60
+    const duration = targetMode === 'focus' ? FOCUS_TIME : BREAK_TIME
     setIsRunning(true)
     setIsOvertime(false)
     setOvertimeSeconds(0)
