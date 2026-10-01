@@ -230,10 +230,13 @@ export default function PomodoroTimer() {
         </div>
       </div>
 
-      {/* Contador de Ciclos Concluídos Hoje */}
-      <div className="hidden sm:flex items-center gap-1 bg-slate-950/80 border border-slate-800 px-2.5 py-1 rounded-xl text-xs font-medium text-amber-400 shadow-inner" title="Ciclos de foco concluídos hoje">
+      {/* Contador de Ciclos Concluídos Hoje com Rótulo Explicativo */}
+      <div className="hidden sm:flex items-center gap-1.5 bg-slate-950/80 border border-slate-800 px-3 py-1 rounded-xl text-xs font-medium text-amber-400 shadow-inner" title="Sessões de foco de 25m concluídas hoje">
         <span>🔥</span>
-        <span className="font-mono font-bold">{completedCycles}</span>
+        <div className="flex items-center gap-1">
+          <span className="font-mono font-bold text-amber-400">{completedCycles}</span>
+          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">ciclos</span>
+        </div>
       </div>
 
       <div className="flex items-center gap-1.5 border-l border-slate-800/80 pl-3">
