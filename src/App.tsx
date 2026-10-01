@@ -100,6 +100,7 @@ export default function App() {
   const [fontSize, setFontSize] = useState(16)
   const [onlyOverdue, setOnlyOverdue] = useState(false)
   const [isFocusMode, setIsFocusMode] = useState(false)
+  const [selectedStatus, setSelectedStatus] = useState<string | null>(null)
 
   // Modais e Toasts
   const [isModalOpen, setIsModalOpen] = useState(false)
@@ -142,16 +143,19 @@ export default function App() {
     setTagFilter('')
     setSortBy('default')
     setOnlyOverdue(false)
+    setSelectedStatus(null)
     showToast('Filtros redefinidos!', 'info')
   }
 
-  // Filtragem
+  // Filtragem Avançada
   const filteredTasks = tasks.filter((task: any) => {
     const matchesSearch =
       task.title.toLowerCase().includes(search.toLowerCase()) ||
       (task.description && task.description.toLowerCase().includes(search.toLowerCase()))
-    const matchesPriority = priorityFilter ? task.priority === priorityFilter : true
-    const matchesTag = tagFilter ? task.tag === tagFilter : true
+    
+    const matchesPriority = !priorityFilter || priorityFilter === 'all' ? true : task.priority === priorityFilter
+    const matchesTag = !tagFilter || tagFilter === 'all' ? true : task.tag === tagFilter
+    const matchesStatus = selectedStatus ? task.status === selectedStatus : true
 
     let matchesOverdue = true
     if (onlyOverdue) {
@@ -165,10 +169,10 @@ export default function App() {
       }
     }
 
-    return matchesSearch && matchesPriority && matchesTag && matchesOverdue
+    return matchesSearch && matchesPriority && matchesTag && matchesOverdue && matchesStatus
   })
 
-  // Ordenação
+  // Ordenação Inteligente
   const sortedTasks = [...filteredTasks].sort((a: any, b: any) => {
     if (sortBy === 'priority') {
       const weights: Record<string, number> = { Urgente: 4, Alta: 3, Média: 2, Baixa: 1 }
@@ -178,6 +182,9 @@ export default function App() {
       if (!a.dueDate) return 1
       if (!b.dueDate) return -1
       return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+    }
+    if (sortBy === 'alphabetical') {
+      return a.title.localeCompare(b.title)
     }
     return 0
   })
@@ -294,7 +301,7 @@ export default function App() {
     }
   }
 
-  const hasActiveFilters = search || priorityFilter || tagFilter || sortBy !== 'default' || onlyOverdue
+  const hasActiveFilters = search || priorityFilter || tagFilter || sortBy !== 'default' || onlyOverdue || selectedStatus !== null
 
   return (
     <div className={`min-h-screen flex flex-col selection:bg-indigo-500 selection:text-white transition-all ${THEME_CLASSES[theme] || THEME_CLASSES.slate}`}>
@@ -321,101 +328,43 @@ export default function App() {
             exit={{ opacity: 0, height: 0 }}
             className="flex flex-col gap-6"
           >
-            <div className="flex flex-col gap-1">
-              <h1 className="text-xl sm:text-2xl font-extrabold tracking-tight flex items-center gap-2">
-                🚀 Taskflow Dashboard
-              </h1>
-              <p className="text-xs sm:text-sm text-slate-400">
-                Gerencie suas tarefas com eficiência, foco e produtividade máxima.
-              </p>
-            </div>
-
-            <Dashboard tasks={tasks} />
+            <Dashboard
+              tasks={tasks}
+              selectedStatus={selectedStatus}
+              onSelectStatus={setSelectedStatus}
+              searchTerm={search}
+              onSearchChange={setSearch}
+              selectedPriority={priorityFilter || 'all'}
+              onPriorityChange={(val) => setPriorityFilter(val === 'all' ? '' : val)}
+              selectedTag={tagFilter || 'all'}
+              onTagChange={(val) => setTagFilter(val === 'all' ? '' : val)}
+              sortBy={sortBy}
+              onSortChange={setSortBy}
+              onlyOverdue={onlyOverdue}
+              onToggleOverdue={() => setOnlyOverdue(!onlyOverdue)}
+            />
           </motion.div>
         )}
 
-        {/* Barra de Filtros */}
+        {/* Barra de Filtros Adicionais / Ações */}
         <div className="flex flex-col lg:flex-row items-center gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800/80 shadow-lg">
-          <div className="relative flex-1 w-full">
-            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500 text-sm">
-              🔍
-            </span>
-            <input
-              type="text"
-              placeholder="Pesquisar tarefas..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-200 placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-indigo-500 text-xs sm:text-sm transition-all"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 sm:flex items-center gap-2.5 w-full lg:w-auto flex-wrap">
-            {/* Filtro por Prioridade */}
-            <select
-              value={priorityFilter}
-              onChange={(e) => setPriorityFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
-            >
-              <option value="">Todas Prioridades</option>
-              <option value="Baixa">Baixa</option>
-              <option value="Média">Média</option>
-              <option value="Alta">Alta</option>
-              <option value="Urgente">Urgente</option>
-            </select>
-
-            {/* Filtro por Tag */}
-            <select
-              value={tagFilter}
-              onChange={(e) => setTagFilter(e.target.value)}
-              className="w-full sm:w-auto px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-slate-300 text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
-            >
-              <option value="">Todas Tags</option>
-              <option value="Design">Design</option>
-              <option value="Frontend">Frontend</option>
-              <option value="Backend">Backend</option>
-              <option value="Bug">Bug</option>
-              <option value="DevOps">DevOps</option>
-            </select>
-
-            {/* Ordenação */}
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-              className="col-span-2 sm:col-span-1 w-full sm:w-auto px-3 py-2 bg-slate-950 border border-slate-800 rounded-xl text-indigo-300 font-medium text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all cursor-pointer"
-            >
-              <option value="default">↕ Ordenar: Padrão</option>
-              <option value="priority">⚡ Prioridade (Alta → Baixa)</option>
-              <option value="dueDate">📅 Data Limite (Mais Urgente)</option>
-            </select>
-
-            {/* Botão Atrasadas */}
-            <button
-              onClick={() => setOnlyOverdue(!onlyOverdue)}
-              className={`px-3 py-2 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
-                onlyOverdue
-                  ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-md'
-                  : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
-              }`}
-            >
-              ⚠️ Atrasadas
-            </button>
-
-            {/* Limpar Filtros */}
+          <div className="flex items-center justify-between w-full lg:w-auto gap-2 flex-wrap">
+            {/* Botão Limpar Filtros */}
             {hasActiveFilters && (
               <button
                 onClick={handleClearFilters}
                 className="px-3 py-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 rounded-xl text-xs font-semibold transition-all cursor-pointer"
               >
-                ✕ Limpar
+                ✕ Limpar Filtros
               </button>
             )}
 
             {/* Backups */}
-            <div className="col-span-2 sm:col-span-auto flex items-center gap-1.5 w-full sm:w-auto">
+            <div className="flex items-center gap-1.5">
               <button
                 onClick={handleExportBackup}
                 title="Descarregar backup completo em JSON"
-                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1"
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
               >
                 💾 JSON
               </button>
@@ -423,7 +372,7 @@ export default function App() {
               <button
                 onClick={handleExportCSV}
                 title="Exportar dados para formato CSV (Excel)"
-                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1"
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-emerald-400 rounded-xl text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
               >
                 📊 CSV
               </button>
@@ -439,14 +388,16 @@ export default function App() {
               <button
                 onClick={() => fileInputRef.current?.click()}
                 title="Carregar backup de ficheiro JSON"
-                className="flex-1 sm:flex-none px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs sm:text-sm font-medium transition-colors cursor-pointer flex items-center justify-center gap-1"
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium transition-colors cursor-pointer flex items-center gap-1"
               >
                 📂 Importar
               </button>
             </div>
+          </div>
 
+          <div className="flex items-center justify-end gap-3 w-full lg:w-auto ml-auto">
             {/* Alternador Kanban / Tabela */}
-            <div className="col-span-2 sm:col-span-auto flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
+            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-xl p-1">
               <button
                 onClick={() => setViewMode('kanban')}
                 className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
